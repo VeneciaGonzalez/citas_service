@@ -3,7 +3,7 @@ package com.veneciagonzalez.entrega3.salud.cita_service.controller;
 import java.time.LocalDateTime;
 import java.util.List;
 
-import org.springframework.format.annotation.DateTimeFormat;
+//import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -98,20 +98,26 @@ public class CitaController {
         return ResponseEntity.ok(citaService.buscarPorEspecialidadYEstado(especialidad, estadoCita));
     }
 
-    // GET citas fecha --> http://localhost:8081/citas/fecha?desde=2026-05-01T00:00:00
+    // GET citas fecha y hora --> http://localhost:8081/citas/fecha?fecha=2026-05-01&hora=09:00
     @GetMapping("/fecha")
     public ResponseEntity<List<CitaMedicaResponseDTO>> buscarPorFechaDesde(
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime desde) {
-        log.info("GET /citas/fecha - Buscando citas desde: {}", desde);
+            @RequestParam String fecha,
+            @RequestParam(defaultValue = "00:00") String hora) {
+        log.info("GET /citas/fecha - Buscando citas desde: {} {}", fecha, hora);
+        LocalDateTime desde = LocalDateTime.parse(fecha + "T" + hora + ":00");
         return ResponseEntity.ok(citaService.buscarPorFechaDesde(desde));
     }
 
-    // GET rango fechas --> http://localhost:8081/citas/fecha-rango?inicio=2026-05-01T00:00:00&fin=2026-08-01T00:00:00
+    // GET rango fecha --> http://localhost:8081/citas/fecha-rango?fechaInicio=2026-05-01&fechaFin=2026-08-01&horaInicio=00:00&horaFin=23:59
     @GetMapping("/fecha-rango")
     public ResponseEntity<List<CitaMedicaResponseDTO>> buscarPorRangoFechas(
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime inicio,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fin) {
-        log.info("GET /citas/fecha-rango - Entre {} y {}", inicio, fin);
+            @RequestParam String fechaInicio,
+            @RequestParam String fechaFin,
+            @RequestParam(defaultValue = "00:00") String horaInicio,
+            @RequestParam(defaultValue = "23:59") String horaFin) {
+        log.info("GET /citas/fecha-rango - Entre {} {} y {} {}", fechaInicio, horaInicio, fechaFin, horaFin);
+        LocalDateTime inicio = LocalDateTime.parse(fechaInicio + "T" + horaInicio + ":00");
+        LocalDateTime fin = LocalDateTime.parse(fechaFin + "T" + horaFin + ":00");
         return ResponseEntity.ok(citaService.buscarPorRangoFechas(inicio, fin));
     }
 

@@ -14,10 +14,10 @@ public interface CitaMedicaRepository extends JpaRepository<CitaMedicaEntity, Lo
     // Busca especialidad 
     List<CitaMedicaEntity> findByEspecialidad(String especialidad);
 
-    // Buscar especialidad parcial
+    // Busca especialidad parcial
     List<CitaMedicaEntity> findByEspecialidadContaining(String especialidad);
 
-    // Buscar estado de cita
+    // Busca estado de cita
     List<CitaMedicaEntity> findByEstadoCita(String estadoCita);
 
     // Solo citas activas
