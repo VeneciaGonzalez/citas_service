@@ -1,58 +1,44 @@
 package com.veneciagonzalez.entrega3.salud.cita_service.service;
 
-import com.veneciagonzalez.entrega3.salud.cita_service.model.CitaMedica;
-import org.springframework.stereotype.Service;
-
-import java.util.ArrayList;
+import java.time.LocalDateTime;
 import java.util.List;
-import java.util.stream.Collectors;
-
-@Service
-public class CitaService {
-    
-    private List<CitaMedica> listaCitas = new ArrayList<>();
-
-    public CitaService() {
-        listaCitas.add(new CitaMedica(1L, "Mónica Mieres",       "Pediatria",      "2026-04-30", "09:00", "Agendada"));
-        listaCitas.add(new CitaMedica(2L, "Paula Mieres",        "Odontologia",    "2026-05-30", "09:00", "Agendada"));
-        listaCitas.add(new CitaMedica(3L, "Erik Lazcano",        "Dermatología",   "2026-06-31", "09:00", "Pendiente"));
-        listaCitas.add(new CitaMedica(3L, "Sebastian Schneider", "Nutrición",      "2026-07-31", "09:00", "Agendada"));
-        listaCitas.add(new CitaMedica(4L, "Jose Jadad",          "Dermatología",   "2026-08-31", "09:00", "Cancelada"));
-        listaCitas.add(new CitaMedica(4L, "Jorge Padraza",       "Nutrición",      "2026-09-31", "09:00", "Confirmada"));
-
-    }
-
-    //Devuelve la lista de citas 
-    public List<CitaMedica> consultaListaCitas() { return listaCitas; }
 
 
-    //Devuelve cita por Id
-    public CitaMedica consultaCitasId(Long id) {
-        return listaCitas.stream().filter(c -> c.getId().equals(id)).findFirst().orElse(null);
-    }
 
+import com.veneciagonzalez.entrega3.salud.cita_service.dto.CitaMedicaRequestDTO;
+import com.veneciagonzalez.entrega3.salud.cita_service.dto.CitaMedicaResponseDTO;
 
-    //Devuelve cita disponible
-    public List<CitaMedica> consultaCitasDisponibles(String especialidad, String fecha) {
-        return listaCitas.stream()
-                .filter(c -> c.getEspecialidad().equalsIgnoreCase(especialidad) && c.getFecha().equals(fecha))
-                .collect(Collectors.toList());
-    }
+public interface CitaService {
 
+    List<CitaMedicaResponseDTO> obtenerTodas();
 
-    //Devuelve estadoCita 
-    public List<CitaMedica> consultaEstadoCita(String estadoCita) {
-        return listaCitas.stream()
-                .filter(c -> c.getEstadoCita().equalsIgnoreCase(estadoCita))
-                .collect(Collectors.toList());
-    }
+    CitaMedicaResponseDTO obtenerPorId(Long id);
 
+    List<CitaMedicaResponseDTO> buscarPorEspecialidad(String especialidad);
 
-    //Agrega nueva cita
-    public CitaMedica agregarNuevaCitaMedica(CitaMedica nuevaCitaMedica) {
-        listaCitas.add(nuevaCitaMedica);
-        return nuevaCitaMedica;
-    }
+    List<CitaMedicaResponseDTO> buscarPorEspecialidadParcial(String especialidad);
 
-    
+    List<CitaMedicaResponseDTO> buscarPorEstado(String estadoCita);
+
+    List<CitaMedicaResponseDTO> obtenerActivas();
+
+    List<CitaMedicaResponseDTO> obtenerActivasOrdenadasPorFecha();
+
+    List<CitaMedicaResponseDTO> buscarPorEspecialidadYEstado(String especialidad, String estadoCita);
+
+    List<CitaMedicaResponseDTO> buscarPorFechaDesde(LocalDateTime fecha);
+
+    List<CitaMedicaResponseDTO> buscarPorRangoFechas(LocalDateTime inicio, LocalDateTime fin);
+
+    List<CitaMedicaResponseDTO> buscarPorNombrePaciente(String nombre);
+
+    List<CitaMedicaResponseDTO> buscarComplejo(String especialidad);
+
+    CitaMedicaResponseDTO crearCita(CitaMedicaRequestDTO request);
+
+    CitaMedicaResponseDTO actualizarCita(Long id, CitaMedicaRequestDTO request);
+
+    boolean eliminarCita(Long id);
+
+    boolean desactivarCita(Long id);
 }
