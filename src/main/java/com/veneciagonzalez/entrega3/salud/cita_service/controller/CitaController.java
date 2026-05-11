@@ -1,24 +1,19 @@
 package com.veneciagonzalez.entrega3.salud.cita_service.controller;
 
-import java.time.LocalDateTime;
+//import java.time.LocalDateTime;
 import java.util.List;
 
-//import org.springframework.format.annotation.DateTimeFormat;
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.*;
+
+import org.springframework.hateoas.CollectionModel;
+import org.springframework.hateoas.EntityModel;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import com.veneciagonzalez.entrega3.salud.cita_service.dto.CitaMedicaRequestDTO;
 import com.veneciagonzalez.entrega3.salud.cita_service.dto.CitaMedicaResponseDTO;
-
+import com.veneciagonzalez.entrega3.salud.cita_service.exception.CitaNotFoundException;
 import com.veneciagonzalez.entrega3.salud.cita_service.service.CitaService;
 
 import jakarta.validation.Valid;
@@ -35,124 +30,74 @@ public class CitaController {
         this.citaService = citaService;
     }
 
-    // GET alls --> http://localhost:8081/citas
+    // GET todas --> http://localhost:8081/citas
     @GetMapping
-    public ResponseEntity<List<CitaMedicaResponseDTO>> obtenerTodas() {
+    public ResponseEntity<CollectionModel<EntityModel<CitaMedicaResponseDTO>>> obtenerTodas() {
         log.info("GET /citas - Obteniendo todas las citas");
-        return ResponseEntity.ok(citaService.obtenerTodas());
+
+        List<EntityModel<CitaMedicaResponseDTO>> citas = citaService.obtenerTodas()
+                .stream()
+                .map(cita -> EntityModel.of(cita,
+                        linkTo(methodOn(this.getClass()).obtenerPorId(cita.getId())).withSelfRel(),
+                        linkTo(methodOn(this.getClass()).obtenerTodas()).withRel("all-citas")))
+                .toList();
+
+        CollectionModel<EntityModel<CitaMedicaResponseDTO>> recursos =
+                CollectionModel.of(citas,
+                        linkTo(methodOn(this.getClass()).obtenerTodas()).withSelfRel());
+
+        return ResponseEntity.ok(recursos);
     }
 
-    // GET ID --> http://localhost:8081/citas/1
+    // GET por ID --> http://localhost:8081/citas/1
     @GetMapping("/{id}")
-    public ResponseEntity<?> obtenerPorId(@PathVariable Long id) {
+    public ResponseEntity<EntityModel<CitaMedicaResponseDTO>> obtenerPorId(@PathVariable Long id) {
         log.info("GET /citas/{} - Buscando cita por ID", id);
+
         CitaMedicaResponseDTO cita = citaService.obtenerPorId(id);
         if (cita == null) {
-            log.warn("Cita ID {} no encontrada", id);
-            return ResponseEntity.notFound().build();
+            throw new CitaNotFoundException("Cita no encontrada con ID: " + id);
         }
-        return ResponseEntity.ok(cita);
+
+        EntityModel<CitaMedicaResponseDTO> recurso = EntityModel.of(cita,
+                linkTo(methodOn(this.getClass()).obtenerPorId(id)).withSelfRel(),
+                linkTo(methodOn(this.getClass()).obtenerTodas()).withRel("all-citas"));
+
+        return ResponseEntity.ok(recurso);
     }
 
-    // GET especialidad  --> http://localhost:8081/citas/especialidad?nombre=Pediatria
-    @GetMapping("/especialidad")
-    public ResponseEntity<List<CitaMedicaResponseDTO>> buscarPorEspecialidad(@RequestParam String nombre) {
-        log.info("GET /citas/especialidad - Buscando por especialidad: {}", nombre);
-        return ResponseEntity.ok(citaService.buscarPorEspecialidad(nombre));
-    }
-
-    // GET especialidad parcial --> http://localhost:8081/citas/especialidad-parcial?nombre=ped
-    @GetMapping("/especialidad-parcial")
-    public ResponseEntity<List<CitaMedicaResponseDTO>> buscarPorEspecialidadParcial(@RequestParam String nombre) {
-        log.info("GET /citas/especialidad - Buscando especialidad: {}", nombre);
-        return ResponseEntity.ok(citaService.buscarPorEspecialidadParcial(nombre));
-    }
-
-    // GET estado --> http://localhost:8081/citas/estado?estadoCita=Cancelada
-    @GetMapping("/estado")
-    public ResponseEntity<List<CitaMedicaResponseDTO>> buscarPorEstado(@RequestParam String estadoCita) {
-        log.info("GET /citas/estado - Buscando por estado: {}", estadoCita);
-        return ResponseEntity.ok(citaService.buscarPorEstado(estadoCita));
-    }
-
-    // GET citas activas --> http://localhost:8081/citas/activas
-    @GetMapping("/activas")
-    public ResponseEntity<List<CitaMedicaResponseDTO>> obtenerActivas() {
-        log.info("GET /citas/activas - Obteniendo citas activas");
-        return ResponseEntity.ok(citaService.obtenerActivas());
-    }
-
-    // GET activas ordenadas por fecha --> http://localhost:8081/citas/activas-ordenadas
-    @GetMapping("/activas-ordenadas")
-    public ResponseEntity<List<CitaMedicaResponseDTO>> obtenerActivasOrdenadasPorFecha() {
-        log.info("GET /citas/activas-ordenadas - Obteniendo citas activas ordenadas por fecha");
-        return ResponseEntity.ok(citaService.obtenerActivasOrdenadasPorFecha());
-    }
-
-    // GET especialidad y estado --> http://localhost:8081/citas/filtro?especialidad=Pediatria&estadoCita=Agendada
-    @GetMapping("/filtro")
-    public ResponseEntity<List<CitaMedicaResponseDTO>> buscarPorEspecialidadYEstado(
-            @RequestParam String especialidad,
-            @RequestParam String estadoCita) {
-        log.info("GET /citas/filtro - especialidad: {}, estado: {}", especialidad, estadoCita);
-        return ResponseEntity.ok(citaService.buscarPorEspecialidadYEstado(especialidad, estadoCita));
-    }
-
-    // GET citas fecha y hora --> http://localhost:8081/citas/fecha?fecha=2026-05-01&hora=09:00
-    @GetMapping("/fecha")
-    public ResponseEntity<List<CitaMedicaResponseDTO>> buscarPorFechaDesde(
-            @RequestParam String fecha,
-            @RequestParam(defaultValue = "00:00") String hora) {
-        log.info("GET /citas/fecha - Buscando citas desde: {} {}", fecha, hora);
-        LocalDateTime desde = LocalDateTime.parse(fecha + "T" + hora + ":00");
-        return ResponseEntity.ok(citaService.buscarPorFechaDesde(desde));
-    }
-
-    // GET rango fecha --> http://localhost:8081/citas/fecha-rango?fechaInicio=2026-05-01&fechaFin=2026-08-01&horaInicio=00:00&horaFin=23:59
-    @GetMapping("/fecha-rango")
-    public ResponseEntity<List<CitaMedicaResponseDTO>> buscarPorRangoFechas(
-            @RequestParam String fechaInicio,
-            @RequestParam String fechaFin,
-            @RequestParam(defaultValue = "00:00") String horaInicio,
-            @RequestParam(defaultValue = "23:59") String horaFin) {
-        log.info("GET /citas/fecha-rango - Entre {} {} y {} {}", fechaInicio, horaInicio, fechaFin, horaFin);
-        LocalDateTime inicio = LocalDateTime.parse(fechaInicio + "T" + horaInicio + ":00");
-        LocalDateTime fin = LocalDateTime.parse(fechaFin + "T" + horaFin + ":00");
-        return ResponseEntity.ok(citaService.buscarPorRangoFechas(inicio, fin));
-    }
-
-    // GET nombre paciente --> http://localhost:8081/citas/paciente?nombre=Monica
-    @GetMapping("/paciente")
-    public ResponseEntity<List<CitaMedicaResponseDTO>> buscarPorNombrePaciente(@RequestParam String nombre) {
-        log.info("GET /citas/paciente - Buscando por nombre: {}", nombre);
-        return ResponseEntity.ok(citaService.buscarPorNombrePaciente(nombre));
-    }
-
-    // GET búsqueda complejo --> http://localhost:8081/citas/buscar-complejo?especialidad=derma
-    @GetMapping("/buscar-complejo")
-    public ResponseEntity<List<CitaMedicaResponseDTO>> buscarComplejo(@RequestParam String especialidad) {
-        log.info("GET /citas/buscar-complejo - especialidad: {}", especialidad);
-        return ResponseEntity.ok(citaService.buscarComplejo(especialidad));
-    }
-
-    // POST crear cita --> http://localhost:8081/citas
+    // POST crear --> http://localhost:8081/citas
     @PostMapping
-    public ResponseEntity<CitaMedicaResponseDTO> crearCita(@Valid @RequestBody CitaMedicaRequestDTO request) {
+    public ResponseEntity<EntityModel<CitaMedicaResponseDTO>> crearCita(
+            @Valid @RequestBody CitaMedicaRequestDTO request) {
         log.info("POST /citas - Creando cita para: {}", request.getNombrePaciente());
+
         CitaMedicaResponseDTO creada = citaService.crearCita(request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(creada);
+
+        EntityModel<CitaMedicaResponseDTO> recurso = EntityModel.of(creada,
+                linkTo(methodOn(this.getClass()).obtenerPorId(creada.getId())).withSelfRel(),
+                linkTo(methodOn(this.getClass()).obtenerTodas()).withRel("all-citas"));
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(recurso);
     }
 
-    // PUT actualizar cita --> http://localhost:8081/citas/1
+    // PUT actualizar --> http://localhost:8081/citas/1
     @PutMapping("/{id}")
-    public ResponseEntity<?> actualizarCita(@PathVariable Long id,
+    public ResponseEntity<EntityModel<CitaMedicaResponseDTO>> actualizarCita(
+            @PathVariable Long id,
             @Valid @RequestBody CitaMedicaRequestDTO request) {
         log.info("PUT /citas/{} - Actualizando cita", id);
+
         CitaMedicaResponseDTO actualizada = citaService.actualizarCita(id, request);
         if (actualizada == null) {
-            return ResponseEntity.notFound().build();
+            throw new CitaNotFoundException("Cita no encontrada con ID: " + id);
         }
-        return ResponseEntity.ok(actualizada);
+
+        EntityModel<CitaMedicaResponseDTO> recurso = EntityModel.of(actualizada,
+                linkTo(methodOn(this.getClass()).obtenerPorId(id)).withSelfRel(),
+                linkTo(methodOn(this.getClass()).obtenerTodas()).withRel("all-citas"));
+
+        return ResponseEntity.ok(recurso);
     }
 
     // DELETE físico --> http://localhost:8081/citas/1
@@ -161,19 +106,52 @@ public class CitaController {
         log.info("DELETE /citas/{} - Eliminando cita", id);
         boolean eliminada = citaService.eliminarCita(id);
         if (!eliminada) {
-            return ResponseEntity.notFound().build();
+            throw new CitaNotFoundException("Cita no encontrada con ID: " + id);
         }
         return ResponseEntity.noContent().build();
     }
 
-    // PUT desactivar (eliminado lógico) --> http://localhost:8081/citas/1/desactivar
+    // PUT desactivar --> http://localhost:8081/citas/1/desactivar
     @PutMapping("/{id}/desactivar")
     public ResponseEntity<?> desactivarCita(@PathVariable Long id) {
         log.info("PUT /citas/{}/desactivar - Desactivando cita", id);
         boolean desactivada = citaService.desactivarCita(id);
         if (!desactivada) {
-            return ResponseEntity.notFound().build();
+            throw new CitaNotFoundException("Cita no encontrada con ID: " + id);
         }
         return ResponseEntity.noContent().build();
     }
+
+    // GET por especialidad --> http://localhost:8081/citas/especialidad?nombre=Pediatria
+    @GetMapping("/especialidad")
+    public ResponseEntity<List<CitaMedicaResponseDTO>> buscarPorEspecialidad(@RequestParam String nombre) {
+        log.info("GET /citas/especialidad - Buscando por especialidad: {}", nombre);
+        return ResponseEntity.ok(citaService.buscarPorEspecialidad(nombre));
+    }
+
+    // GET por estado --> http://localhost:8081/citas/estado?estadoCita=Cancelada
+    @GetMapping("/estado")
+    public ResponseEntity<List<CitaMedicaResponseDTO>> buscarPorEstado(@RequestParam String estadoCita) {
+        log.info("GET /citas/estado - Buscando por estado: {}", estadoCita);
+        return ResponseEntity.ok(citaService.buscarPorEstado(estadoCita));
+    }
+
+    // GET activas --> http://localhost:8081/citas/activas
+    @GetMapping("/activas")
+    public ResponseEntity<List<CitaMedicaResponseDTO>> obtenerActivas() {
+        log.info("GET /citas/activas - Obteniendo citas activas");
+        return ResponseEntity.ok(citaService.obtenerActivas());
+    }
+
+    // GET por paciente --> http://localhost:8081/citas/paciente?nombre=Monica
+    @GetMapping("/paciente")
+    public ResponseEntity<List<CitaMedicaResponseDTO>> buscarPorNombrePaciente(@RequestParam String nombre) {
+        log.info("GET /citas/paciente - Buscando por paciente: {}", nombre);
+        return ResponseEntity.ok(citaService.buscarPorNombrePaciente(nombre));
+    }
+
+
+
+
+    
 }

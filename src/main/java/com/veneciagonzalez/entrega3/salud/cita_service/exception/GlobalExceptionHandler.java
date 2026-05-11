@@ -63,4 +63,20 @@ public class GlobalExceptionHandler {
 
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(respuesta);
     }
+
+
+
+    
+    @ExceptionHandler(CitaNotFoundException.class)
+    public ResponseEntity<Map<String, Object>> manejarCitaNoEncontrada(CitaNotFoundException ex) {
+        log.error("Cita no encontrada: {}", ex.getMessage());
+
+        Map<String, Object> respuesta = new HashMap<>();
+        respuesta.put("timestamp", LocalDateTime.now().toString());
+        respuesta.put("status", 404);
+        respuesta.put("error", "Cita no encontrada");
+        respuesta.put("mensaje", ex.getMessage());
+
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(respuesta);
+    }
 }
